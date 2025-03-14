@@ -33,14 +33,18 @@ class DatabaseService {
     double latitude,
     double longitude,
     String address,
+    String wardNo,
+    String wardName,
   ) async {
     String base64Image = await encodeImageToBase64(image);
 
     await FirebaseFirestore.instance.collection('waste_reports').add({
-      'imageBase64': base64Image, // 🔹 Store compressed image
+      'imageBase64': base64Image,
       'latitude': latitude,
       'longitude': longitude,
       'address': address,
+      'ward_no': wardNo,
+      'ward_name': wardName,
       'status': 'Pending',
       'timestamp': FieldValue.serverTimestamp(),
     });

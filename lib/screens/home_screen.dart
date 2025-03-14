@@ -53,7 +53,7 @@ class AuthorityHomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: const SelectWardScreen(),
+      body: AuthorityScreen(),
     );
   }
 }

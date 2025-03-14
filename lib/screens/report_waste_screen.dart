@@ -9,6 +9,7 @@ import 'package:user_management/providers/auth_provider.dart';
 import 'package:user_management/screens/home_screen.dart';
 import 'package:user_management/screens/landing_screen.dart';
 import 'package:user_management/services/database_service.dart';
+import 'package:user_management/utils/parse_kml.dart';
 
 class ReportWasteScreen extends StatefulWidget {
   const ReportWasteScreen({super.key});
@@ -23,6 +24,8 @@ class _ReportWasteScreenState extends State<ReportWasteScreen> {
   double? _longitude;
   bool _isLoading = false;
   String? _address;
+  String? _wardNo;
+  String? _wardName;
 
   /// 📸 Capture image from camera
   Future<void> _captureImage() async {
@@ -45,19 +48,6 @@ class _ReportWasteScreenState extends State<ReportWasteScreen> {
       _isLoading = true;
     });
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        _showError("⚠️ Location permission is required.");
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
-    }
-
     try {
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
@@ -65,27 +55,36 @@ class _ReportWasteScreenState extends State<ReportWasteScreen> {
 
       _latitude = position.latitude;
       _longitude = position.longitude;
+      _address = await _getAddressFromCoordinates(_latitude!, _longitude!);
 
-      String address = await _getAddressFromCoordinates(
+      // Extract Ward Information
+      KMLParser kmlParser = KMLParser();
+      await kmlParser.loadKML('assets/wards.kml'); // Load the KML file
+      final wardData = kmlParser.getWardFromCoordinates(
         _latitude!,
         _longitude!,
       );
 
+      if (wardData != null) {
+        setState(() {
+          _wardNo =
+              double.tryParse(wardData['ward_no'] ?? '')?.toInt().toString();
+          _wardName = wardData['ward_name'];
+        });
+      } else {
+        _showError("⚠️ Could not determine ward.");
+      }
+
       setState(() {
-        _latitude = position.latitude;
-        _longitude = position.longitude;
-        _address = address; // Store the address
+        _isLoading = false;
       });
 
-      print("✅ GPS Extracted: Latitude = $_latitude, Longitude = $_longitude");
+      print("✅ GPS: $_latitude, $_longitude");
       print("📍 Address: $_address");
+      print("🏛️ Ward: $_wardNo - $_wardName");
     } catch (e) {
       _showError("❌ Error getting location: ${e.toString()}");
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   Future<String> _getAddressFromCoordinates(double lat, double lon) async {
@@ -129,6 +128,8 @@ class _ReportWasteScreenState extends State<ReportWasteScreen> {
         _latitude!,
         _longitude!,
         _address!,
+        _wardNo!,
+        _wardName!,
       );
 
       setState(() {
